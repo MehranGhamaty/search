@@ -1,0 +1,9 @@
+
+Name:
+    Mehran Ghamaty
+language:
+    c++ (gcc 6.4.1 used)
+Compile:
+    make
+Run:
+    simplex inputpath

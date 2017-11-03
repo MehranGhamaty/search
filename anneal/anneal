@@ -1,0 +1,90 @@
+#!/usr/bin/env python3.6
+
+"""
+    This runs simulated annealing for graph coloring
+"""
+
+
+import sys
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+import plotter as p
+import graph as g
+import simulatedanneal as sa
+import chain as c
+import files as f
+
+
+if __name__ == "__main__":
+
+    if len(sys.argv) < 4:
+        print("Usage: {} <filename> <seed> -[penalty,kempe,fixed_k,chain] [-st] [-plot]".format(
+            sys.argv[0]))
+        exit(-1)
+    INSERTCHAR = lambda s, c, l: s[:l]+ c +s[l:]
+    UPPERBOUND = lambda s: len(s.getgraph())**2
+
+    PINPUT = sys.argv[1]
+    SEED = int(sys.argv[2])
+    PENALTY = sys.argv[3][1:]
+    PLOT, ST = False, False
+    if len(sys.argv) > 4:
+        if sys.argv[4] == "-st" or (len(sys.argv) == 6 and sys.argv[5] == "-st"):
+            ST = True
+        if sys.argv[4] == "-plot" or (len(sys.argv) == 6 and sys.argv[5] == "-plot"):
+            PLOT = True
+    np.random.seed(SEED)
+
+    graph = f.readgraph(PINPUT) # pylint: disable=C0103
+    SAPARAMS = f.readparams("params.in")
+
+    if PENALTY == "penalty":
+        g.randomcoloring(graph, range(10))
+        SAPARAMS["objectivefunc"] = g.evaluate
+        SAPARAMS["perturbator"] = g.swapvalue
+    elif PENALTY == "kempe":
+        g.badvalidcoloring(graph)
+        SAPARAMS["objectivefunc"] = g.evaluate
+        SAPARAMS["perturbator"] = g.kempe
+    elif PENALTY == "fixed_k":
+        g.randomcoloring(graph, range(10))
+        SAPARAMS["objectivefunc"] = g.numbadedges
+        SAPARAMS["perturbator"] = g.fixedk
+    elif PENALTY == "chain":
+        """
+            This does not work well, it needs to know what order to apply things...
+            Basically always pickes kempe, maybe increasing the penalty for number of
+            Colors would help....
+        """
+        #g.dsatur(graph)
+        g.randomcoloring(graph, range(10))
+        MYCHAIN = c.MarkovChain([g.fixedk, g.kempe, g.swapvalue])
+        SAPARAMS["objectivefunc"] = g.evaluate
+        SAPARAMS["perturbator"] = MYCHAIN
+
+    if ST:
+        SAPARAMS["tunnel"] = True
+
+    if PLOT:
+        SCOREFUNC = {
+            "getcolors" : lambda x: len(x.getvaluedict())*len(x.getgraph()),
+            "badedges" : g.numbadedges,
+            "lossfunc" : g.evaluate,
+            "validcoloring" : lambda x: 100 if g.validcoloring(x) else 0
+            }
+
+        FIGURE = plt.figure(1)
+        AXIS = FIGURE.add_subplot(1, 1, 1)
+        PLOTTER = p.Plotter(AXIS, SCOREFUNC,
+                            lambda x: "Num Colors: {}".format(str(len(x.getvaluedict()))))
+        PLOTTER(graph)
+        SAPARAMS["ploton"] = PLOTTER
+
+    INITSCORE = SAPARAMS["objectivefunc"](graph)
+    graph, history = sa.simulatedannealing(                                    # pylint: disable=C0103
+        solution=graph,
+        **SAPARAMS)
+    f.outputhistory(history, INITSCORE, "anneal.trace")
+    f.outputcoloringsolution(graph[0], "anneal.run")
