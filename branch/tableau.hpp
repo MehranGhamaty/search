@@ -148,6 +148,7 @@ namespace tableau {
 
 
     //this should be moved inside the branch code for performance reasons
+    //(not just inlining)
     template<typename N> 
     void addslackvariable(tab<N>& t, int row, N value) {
         for(int i = 0; i < t.tableau.size(); ++i) {
