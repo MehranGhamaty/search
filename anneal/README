@@ -10,3 +10,4 @@ to run:
     ./anneal <inputfile> <seed> -[kempe,fixed_k,chain] [-st] [-plot]
 
 
+This is pretty cool. I need to probably get some more documentation; it's a cool toy for learning about optimization in NP=complete contexts.
